@@ -1,1 +1,1 @@
-# WanAvatar
+# OmniAvatar
