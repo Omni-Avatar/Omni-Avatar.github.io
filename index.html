@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="OmniAvatar">
+  <meta name="keywords" content="Video Generation, Diffusion Models">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniAvatar: Efficient Audio-Driven Avatar Video Generation with Adaptive Body Animation</title>
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+  <style>
+    /* Dark theme styles */
+    body {
+      background-color:  #0a0a0a;
+      color: #ffffff;
+    }
+    .title, .subtitle, .content, .publication-title {
+      color: #ffffff !important;
+    }
+    .hero.is-light {
+      background-color: #1a1a1a !important;
+      color: #ffffff !important;
+    }
+    .section {
+      background-color: #0a0a0a;
+    }
+    .footer {
+      background-color: #1a1a1a;
+      color: #ffffff;
+    }
+    .content h1, .content h2, .content h3, .content h4, .content h5, .content h6 {
+      color: #ffffff;
+    }
+    pre {
+      background-color: #1a1a1a;
+      color: #ffffff;
+    }
+    code {
+      background-color: #2a2a2a;
+      color: #ffffff;
+    }
+    .has-text-justified {
+      color: #ffffff;
+    }
+    .hero {
+      margin-top: 10rem;
+      background-color: #0a0a0a !important;
+    }
+    .hero-transparent {
+      position: relative;
+      z-index: 2;
+      margin-top: 0vh;
+      background-color: transparent !important;
+    }
+    .hero, .hero-body, .hero.is-small {
+      background-color: #0a0a0a !important;
+    }
+    html {
+      background-color: #0a0a0a !important;
+    }
+    .column-spacing {
+      margin: 0 2rem !important;
+    }
+    .video-description {
+      min-height: 4.5em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      line-height: 1.2;
+    }
+    .prompt-wrap {
+      position: relative;
+    }
+
+    .prompt-wrap-40 {
+      position: relative;
+    }
+    .prompt-wrap-2 {
+      position: relative;
+    }
+    .prompt-wrap-4 {
+      position: relative;
+    }
+
+    .prompt-wrap-5 {
+      position: relative;
+    }
+
+    .prompt-wrap-6 {
+      position: relative;
+    }
+
+    .prompt {
+      max-width: calc(100% - 20px);
+      position: absolute;
+      background: rgba(0,0,0,0.1);
+      color: rgba(255,255,255,0.9);
+      font-size: 12px;
+      backdrop-filter: blur(10px);
+      bottom: 10px;
+      left: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 10;
+      line-height: 1.4;
+      
+    }
+
+    .prompt-wrap:hover .prompt {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .prompt-wrap-40:hover .prompt {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .prompt-wrap-2:hover .prompt {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .prompt-wrap-4:hover .prompt {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .prompt-wrap-5:hover .prompt {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .prompt-wrap-6:hover .prompt {
+      opacity: 1;
+      pointer-events: all;
+    }
+  </style>
+  
+  <style>
+    .carousel {
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+      font-size: 0; /* Remove any potential inline-block spacing */
+    }
+    
+    .carousel::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
+
+    .prompt-wrap-main {
+      flex: 0 0 auto;
+      height: 180px;
+      position: relative;
+      font-size: 16px; /* Reset font size for content */
+      display: flex; /* Use flexbox to center the video */
+      justify-content: center; /* Center horizontally */
+      align-items: center; /* Center vertically */
+    }
+
+    .prompt-wrap-main video {
+      height: 100%;
+      width: auto;
+      object-fit: contain;
+      display: block; /* Remove any potential inline spacing */
+      margin: 0; /* Remove any margins */
+    }
+
+    .results-carousel {
+      padding: 0;
+      white-space: nowrap; /* Prevent wrapping */
+    }
+  </style>
+</head>
+<body>
+
+<section class="hero-transparent">
+  <div class="column has-text-centered" style="margin-top: 0rem; ">
+    <h1 class="title is-1 publication-title mb-1" style="background: transparent !important; text-shadow: 0px 0px 15px rgba(255, 255, 255, 0.8); color: white;">OmniAvatar</h1>
+    <h2 class="subtitle has-text-centered mt-1" style="background: transparent !important; color: white;">Efficient Audio-Driven Avatar Video Generation with Adaptive Body Animation</h2>
+    
+    <div class="is-size-5 publication-authors" style="background: transparent !important; ">
+      <span class="author-block" style="background: transparent !important;">
+        <a href="https://agnjason.github.io/" style="background: transparent !important; color: white;">Qijun Gan</a ><sup style="color: white;">1†&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</sup>
+      </span>
+      <span class="author-block" style="background: transparent !important;">
+        <a href="https://github.com/ZiziAmy/" style="background: transparent !important; color: white;">Ruizi Yang</a ><sup style="color: white;">1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</sup>
+      </span>
+      <span class="author-block" style="background: transparent !important;">
+        <a href="" style="background: transparent !important; color: white;">Shaofei Xue</a ><sup style="color: white;">2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</sup>
+      </span>
+
+
+      <div class="is-size-5 publication-authors" style="background: transparent !important;">
+        <span class="author-block" style="background: transparent !important;">
+            <a href="https://scholar.google.com/citations?user=JoLjflYAAAAJ" style="background: transparent !important; color: white;">Steven Hoi</a ><sup style="color: white;">2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</sup>
+          </span>
+          <span class="author-block" style="background: transparent !important;">
+            <a href="https://person.zju.edu.cn/en/jkzhu" style="background: transparent !important; color: white;">&nbsp;&nbsp;Jianke Zhu</a ><sup style="color: white;">1‡&nbsp;&nbsp;</sup>
+          </span>
+      </div>
+    </div>  
+
+
+
+    <div class="is-size-5 publication-authors" style="background: transparent !important;">
+      <span class="author-block" style="background: transparent !important; color: white;"><sup style="color: white;">1</sup>Zhejiang University</span><br>
+      <span class="author-block" style="background: transparent !important; color: white;"><sup style="color: white;">2</sup>Quark,&nbsp;&nbsp;&nbsp;Alibaba Group</span><br>
+    </div>
+
+    <div class="is-size-5 publication-authors" style="background: transparent !important;">
+      <span class="author-block" style="background: transparent !important; color: white;"><sup style="color: white;">†</sup>Project leader&nbsp;&nbsp;</span>
+      <span class="author-block" style="background: transparent !important; color: white;"><sup style="color: white;">‡</sup>Corresponding author&nbsp;&nbsp;</span>
+    </div>
+
+    
+    <div class="column has-text-centered">
+        <div class="publication-links">
+          <!-- PDF Link. -->
+          <!-- <span class="link-block">
+            <a href=""
+               class="external-link button is-normal is-rounded is-dark">
+              <span class="icon">
+                  <i class="fas fa-file-pdf"></i>
+              </span>
+              <span>Paper Coming Soon</span>
+            </a>
+          </span> -->
+          <span class="link-block">
+            <a href=""
+               class="external-link button is-normal is-rounded is-dark">
+              <span class="icon">
+                  <i class="ai ai-arxiv"></i>
+              </span>
+              <span>arXiv Coming Soon</span>
+            </a>
+          </span>
+          <!-- Code Link. -->
+          <!-- <span class="link-block">
+            <a href=""
+               class="external-link button is-normal is-rounded is-dark">
+              <span class="icon">
+                  <i class="fab fa-github"></i>
+              </span>
+              <span>Code Coming Soon</span>
+              </a>
+          </span> -->
+    </div>
+  </div>
+</section>
+
+
+<section class="section" style="margin-top: 10rem;">
+  <div class="container is-max-desktop">
+      <div class="prompt-wrap-main full-screen-wrap">
+        <video poster="" autoplay controls muted loop playsinline
+              style="width:90%; height: auto; object-fit: contain;">
+          <source src="./assets/demo.mp4"
+                  type="video/mp4">
+        </video>
+      </div>
+    <div class="columns is-vcentered" style="margin-top: 12rem;">
+        <div class="content has-text-justified">
+          <p>
+
+            Significant progress has been made in audio-driven human animation, while most existing methods focus mainly on facial movements, limiting their ability to create full-body animations with natural synchronization and fluidity. To tackle this issue, we introduce OmniAvatar, an innovative audio-driven full-body video generation model that enhances body animation with improved lip-sync accuracy and natural movements. Our approach includes a pixel-wise multi-hierarchical audio embedding strategy to better capture audio features in the latent space, enhancing lip-syncing across diverse human scenes. We also employ LoRA-based training to maintain the original performance of the foundation models while efficiently integrating audio features. Extensive experiments show that OmniAvatar surpasses existing models in both facial and semi-body video generation, offering precise text-based control for creating videos in various domains, such as podcasts, human interactions, dynamic scenes, and singing.
+            <!-- <a href="https://www.hedra.com/">https://www.hedra.com/</a>, with examples at 
+            <a href="https://magicinfinite.github.io/">https://magicinfinite.github.io/</a>. -->
+          </p>
+        </div>
+    </div>
+  </div>
+</section>
+
+
+<style>
+    #results-carousel {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+  
+    .prompt-wrap {
+      width: 33%; /* 设置每个视频占总宽度的32%，以确保每行显示3个 */
+      margin-bottom: 1rem; /* 设置每行视频之间的间距 */
+    }
+    .prompt-wrap-40 {
+      width: 36%; /* 设置每个视频占总宽度的32%，以确保每行显示3个 */
+      margin-bottom: 1rem;
+    }
+    .prompt-wrap-2{
+      width: 49%; 
+      margin-bottom: 1rem; /* 设置每行视频之间的间距 */
+    }
+    .prompt-wrap-4{
+      width: 25%; 
+      margin-bottom: 1rem; /* 设置每行视频之间的间距 */
+    }
+    .prompt-wrap-5{
+      width: 20%; 
+      margin-bottom: 1rem; /* 设置每行视频之间的间距 */
+    }
+    .prompt-wrap-6{
+      width: 16%; 
+      margin-bottom: 1rem; /* 设置每行视频之间的间距 */
+    }
+  
+    video {
+      width: 100%; /* 视频占满父容器的宽度 */
+      height: auto; /* 保持视频的原始比例 */
+    }
+
+  </style>
+
+<section class="section">
+  <div class="hero-body">
+    <!-- <div class="container" style="max-width: 50%;"> -->
+    <div class="container is-max-desktop" style="margin-top: -5rem;">
+      <h2 class="title is-3">Generated Videos </h2>
+      <p> OmniAvatar can generate lifelike speaking avatar videos that the characters' actions and expressions are natural and rich, with audio perfectly synchronized to their lip movements. OmniAvatar also supports for controlled movement amplitudes by prompts. </p>
+    </div>  
+  </div> 
+  <!-- <div class="container" style="max-width: 60%;"> -->
+  <div class="container is-max-desktop">
+    <div class="hero-body" style="margin-top: -3rem;">
+      <div class="container" style="max-width: 100%;">
+        <!-- <video poster="" autoplay controls muted loop playsinline> -->
+            <!-- <source src="./static/magic_human_video/long_video/case1.mp4" -->
+                    <!-- type="video/mp4"> -->
+        <!-- </video> -->
+        <!-- <h3 class="title is-4"></h3>  -->
+        <div id="results-carousel" class="results-carousel" style="margin-top: -1.3rem;">
+          <div class="prompt-wrap-4">
+            <!-- <video poster="" controls muted loop playsinline> -->
+              <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/demo_1.mp4"
+                      type="video/mp4">
+            </video>
+            <!-- <h3 class="title is-4"></h3>  -->
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap-4">
+            <!-- <video poster="" controls muted loop playsinline> -->
+              <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/demo_2.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/demo_3.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline >
+              <source src="./assets/demo_4.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/demo_5.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/demo_6.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/demo_7.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/demo_8.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+        </div>
+      </div>
+      
+
+    </div>
+  </div> 
+</section>
+
+<!-- Realistic Talking Videos -->
+<section class="section">
+    <div class="hero-body">
+      <!-- <div class="container" style="max-width: 50%;"> -->
+      <div class="container is-max-desktop" style="margin-top: -10rem;">
+        <h2 class="title is-3">Human-object interaction while speaking</h2>
+        <p> OmniAvatar is able to interact with objects while speaking, significantly broadening the application scenarios for audio-driven digital avatars. </p>
+      </div>  
+    </div> 
+
+    <!-- <div class="container" style="max-width: 60%;"> -->
+    <div class="container is-max-desktop">
+      <div class="hero-body" style="margin-top: -5rem;">
+        <div class="container" style="max-width: 100%;">
+          <!-- <h3 class="title is-4"></h3>  -->
+          <div id="results-carousel" class="results-carousel" style="margin-top: -1.3rem;">
+            <div class="prompt-wrap">
+                <video poster="" autoplay controls muted loop playsinline>
+                  <source src="./assets/interact1.mp4"
+                          type="video/mp4">
+                </video>
+                <div class="prompt"></div>
+            </div>
+            <div class="prompt-wrap">
+                <video poster="" autoplay controls muted loop playsinline>
+                  <source src="./assets/interact2.mp4"
+                          type="video/mp4">
+                </video>
+                <div class="prompt"></div>
+            </div>
+            <div class="prompt-wrap">
+              <video poster="" autoplay controls muted loop playsinline>
+                <source src="./assets/interact3.mp4"
+                        type="video/mp4">
+              </video>
+              <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/interact4.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/interact5.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/interact6.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap-2">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/interact7.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap-2">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/interact8.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>      
+      </div>
+        </div>
+    </div>
+  </div>
+</div> 
+</section>   
+
+
+<!-- Comparison with closed-source methods -->
+<section class="section">
+    <div class="hero-body">
+      <!-- <div class="container" style="max-width: 50%;"> -->
+      <div class="container is-max-desktop" style="margin-top: -10rem;">
+        <h2 class="title is-3">Background Control</h2>
+        <p> OmniAvatar can control the background through prompts, adapting to a variety of different scenes.
+        </p>
+      </div>  
+    </div> 
+    <!-- <div class="container" style="max-width: 60%;"> -->
+    <div class="container is-max-desktop">
+      <div class="hero-body" style="margin-top: -8rem;">
+        <div class="container" style="max-width: 100%;">
+          <!-- <h3 class="title is-4"></h3>  -->
+          <div id="results-carousel" class="results-carousel" style="margin-top: -1.3rem;">
+            <div class="prompt-wrap-2">
+              <video poster=""  height="500%" autoplay controls muted loop playsinline>
+                <source src="./assets/background_1.mp4"
+                        type="video/mp4">
+              </video>
+              <h6 class="title is-5" ><center>...ride motorcycle...</center></h6>
+              <div class="prompt"></div>
+            </div> 
+            <div class="prompt-wrap-2">
+              <video poster="" autoplay controls muted loop playsinline>
+                <source src="./assets/background_6.mp4"
+                        type="video/mp4">
+              </video>
+              <h6 class="title is-5" ><center>...cybercafe background...</center></h6>
+              <div class="prompt"></div>
+            </div> 
+            <div class="prompt-wrap-2">
+              <video poster="" autoplay controls muted loop playsinline>
+                <source src="./assets/background_3.mp4"
+                        type="video/mp4">
+              </video>
+              <h6 class="title is-5" ><center>...effects flow in the air...</center></h6>
+              <div class="prompt"></div>
+            </div> 
+            <div class="prompt-wrap-2">
+              <video poster="" autoplay controls muted loop playsinline>
+                <source src="./assets/background_5.mp4"
+                        type="video/mp4">
+              </video>
+              <h6 class="title is-5" ><center>camera zooms out and man under lemon tree...</center></h6>
+              <div class="prompt"></div>
+            </div> 
+
+        </div>
+    </div>
+  </div>
+</div> 
+</section>  
+
+<section class="section">
+  <div class="hero-body">
+    <!-- <div class="container" style="max-width: 50%;"> -->
+    <div class="container is-max-desktop" style="margin-top: -10rem;">
+      <h2 class="title is-3">Emotion Control</h2>
+      <p> OmniAvatar can control the emotions through prompts, like happy, angry, surprise and sad.
+      </p>
+    </div>  
+  </div> 
+  <!-- <div class="container" style="max-width: 60%;"> -->
+  <div class="container is-max-desktop">
+    <div class="hero-body" style="margin-top: -8rem;">
+      <div class="container" style="max-width: 100%;">
+        <!-- <h3 class="title is-4"></h3>  -->
+        <div id="results-carousel" class="results-carousel" style="margin-top: -1.3rem;">
+          <div class="prompt-wrap-2">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/compare_emo1.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-2">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/compare_emo2.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/happy_1.mp4.mp4"
+                      type="video/mp4">
+            </video>
+            <h4 class="title is-4" ><center>Happy</center></h4>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/happy_2.mp4.mp4"
+                      type="video/mp4">
+            </video>
+            <h4 class="title is-4" ><center>Happy</center></h4>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/sad_1.mp4.mp4"
+                      type="video/mp4">
+            </video>
+            <h4 class="title is-4" ><center>Sad</center></h4>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/sad_2.mp4.mp4"
+                      type="video/mp4">
+            </video>
+            <h4 class="title is-4" ><center>Sad</center></h4>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/angry_1.mp4.mp4"
+                      type="video/mp4">
+            </video>
+            <h4 class="title is-4" ><center>Angry</center></h4>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/angry_2.mp4.mp4"
+                      type="video/mp4">
+            </video>
+            <h4 class="title is-4" ><center>Angry</center></h4>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/surprise_1.mp4"
+                      type="video/mp4">
+            </video>
+            <h4 class="title is-4" ><center>Surprise</center></h4>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-4">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/surprise_2.mp4.mp4"
+                      type="video/mp4">
+            </video>
+            <h4 class="title is-4" ><center>Surprise</center></h4>
+            <div class="prompt"></div>
+          </div> 
+      </div>
+  </div>
+</div>
+</div> 
+</section>  
+
+<section class="section">
+  <div class="hero-body">
+    <!-- <div class="container" style="max-width: 50%;"> -->
+    <div class="container is-max-desktop" style="margin-top: -10rem;">
+      <h2 class="title is-3">PodCast for long videos</h2>
+    </div>  
+  </div> 
+  <!-- <div class="container" style="max-width: 60%;"> -->
+  <div class="container is-max-desktop">
+    <div class="hero-body" style="margin-top: -10rem;">
+      <div class="container" style="max-width: 100%;">
+        <!-- <h3 class="title is-4"></h3>  -->
+        <div id="results-carousel" class="results-carousel" style="margin-top: -1.3rem;">
+          <div class="prompt-wrap-2">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/podcast1.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap-2">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/podcast_2.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div> 
+      </div>
+  </div>
+</div>
+</div> 
+</section>  
+
+<section class="section">
+  <div class="hero-body">
+    <!-- <div class="container" style="max-width: 50%;"> -->
+    <div class="container is-max-desktop" style="margin-top: -10rem;">
+      <h2 class="title is-3">Sing</h2>
+    </div>  
+  </div> 
+  <!-- <div class="container" style="max-width: 60%;"> -->
+  <div class="container is-max-desktop">
+    <div class="hero-body" style="margin-top: -10rem;">
+      <div class="container" style="max-width: 100%;">
+        <!-- <h3 class="title is-4"></h3>  -->
+        <div id="results-carousel" class="results-carousel" style="margin-top: -1.3rem;">
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/music_0.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/music_1.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div> 
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/music_2.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/music_4.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/music_3.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/music_5.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+          </div>
+          <div class="prompt-wrap">
+            <video poster="" autoplay controls muted loop playsinline>
+              <source src="./assets/music_6.mp4"
+                      type="video/mp4">
+            </video>
+            <div class="prompt"></div>
+      </div>
+      <div class="prompt-wrap">
+        <video poster="" autoplay controls muted loop playsinline>
+          <source src="./assets/music_7.mp4"
+                  type="video/mp4">
+        </video>
+        <div class="prompt"></div>
+      </div>
+      <div class="prompt-wrap">
+        <video poster="" autoplay controls muted loop playsinline>
+          <source src="./assets/music_8.mp4"
+                  type="video/mp4">
+        </video>
+        <div class="prompt"></div>
+      </div>
+  </div>
+</div>
+</div> 
+</section>  
+
+<!-- Architecture -->
+
+<section class="section" >
+  <div class="container is-max-desktop" style="margin-top: -6rem;">
+    <h2 class="title is-3">Architecture Overview</h2>
+    <div class="container" style="max-width: 100%;">
+      <img src="./assets/pipeline.png" alt="Full Body">
+      <!-- <div id="results-carousel" class="carousel results-carousel"> -->
+        <!-- <div class="item item-fullbody"> -->
+          <!-- <img src="./static/arxiv_method.jpg" alt="Full Body"> -->
+        <!-- </div> -->
+        <!--  -->
+      <!-- </div> -->
+    </div>
+</section>
+
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code></code></pre>
+  </div>
+</section>
+
+
+
+<footer style="text-align: center;">
+  All images are generated by AI.
+  Some audio are from <a
+            href="https://omnihuman-lab.github.io/">OmniHuman-1</a>. The webpage template was based on <a
+              href="https://github.com/nerfies/nerfies.github.io">nerfies</a> and <a
+              href="https://fantasy-amap.github.io/fantasy-talking/">FantasyTalking</a>.
+</footer>
+
+
+</body>
+</html>
